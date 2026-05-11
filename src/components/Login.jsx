@@ -1,19 +1,18 @@
 import React, { useRef, useState } from 'react'
 import Header from './Header'
 import formValidationFun from '../utils/validation';
+import { auth } from '../utils/firebase';
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword ,updateProfile,getAuth} from 'firebase/auth';
+import { useDispatch } from 'react-redux';
+import { addUser } from "../utils/userSlice";
+import { useNavigate } from 'react-router-dom';
+
 
 const Login = () => {
 
-  const validateForm = () => {
-
-    const message = formValidationFun(email.current.value, password.current.value);
-
-    setErrorMessage(message);
-
-
-  }
-
   const [loginType, setLoginType] = useState('login');
+
+  const navigate = useNavigate();
 
   const [errorMessage, setErrorMessage] = useState(null);
 
@@ -21,13 +20,68 @@ const Login = () => {
 
   const password = useRef(null);
 
+  const dispatch = useDispatch();
+  
+  const userName = useRef(null);
+
+
+
+
+  const validateForm = () => {
+
+    // const message = formValidationFun(email.current.value, password.current.value);
+
+
+    if (loginType === 'signup') {
+      createUserWithEmailAndPassword(auth, email.current.value, password.current.value)
+        .then((userCredential) => {
+          console.log('User created:', userCredential.user);
+         
+
+          const user = userCredential.user;
+      
+
+          if (user) {
+            updateProfile(user, {
+              displayName: userName.current.value,
+              photoURL: "https://example.com/jane-q-user/profile.jpg"
+            }).then(() => {
+               navigate('/browse');
+            }).catch((error) => {
+              setErrorMessage(error.message);
+            });
+          }
+
+        })
+        .catch((error) => {
+          setErrorMessage(error.message);
+        });
+    }
+
+    if(loginType=='login') {
+      signInWithEmailAndPassword(auth, email.current.value, password.current.value)
+        .then((userCredential) => {
+          console.log('Signed in:', userCredential.user);
+          navigate('/browse');
+        })
+        .catch((error) => {
+          setErrorMessage(error.message);
+        });
+    }
+
+
+
+
+  }
+
+
   return (
     <div>
       <Header></Header>
 
-      <div className='absolute'>
+      <div>
 
-        <img src='https://assets.nflxext.com/ffe/siteui/vlv3/76c5a455-c62c-46d4-8653-3924728113e3/web/IN-en-20260504-TRIFECTA-perspective_596176fe-3b1e-48ec-8a00-a0acb34e68f1_large.jpg' alt='bg-img' />
+        <img className='w-full' src='https://assets.nflxext.com/ffe/siteui/vlv3/76c5a455-c62c-46d4-8653-3924728113e3/web/IN-en-20260504-TRIFECTA-perspective_596176fe-3b1e-48ec-8a00-a0acb34e68f1_large.jpg' alt='bg-img' />
 
       </div>
 
@@ -36,7 +90,7 @@ const Login = () => {
 
         {loginType == 'signup' &&
 
-          <input className='p-2 my-2 w-full' placeholder='Full Name' type="text" />
+          <input ref={userName} className='p-2 my-2 w-full' placeholder='Full Name' type="text" />
 
         }
 
@@ -48,17 +102,17 @@ const Login = () => {
 
         <button onClick={validateForm} className='my-2 p-2 bg-red-700 w-full rounded-lg'>{loginType == 'login' ? 'Sign In' : 'Sign Up'}</button>
 
-        
+
 
         {loginType == 'login' &&
-          <p className='py-4 my-2 cursor-pointer'><a onClick={() => {
+          <p className='py-4 text-white my-2 cursor-pointer'><a onClick={() => {
             setLoginType('signup')
           }}> New to netfliex? Sign up now</a></p>
 
         }
 
         {loginType == 'signup' &&
-          <p className='py-4 my-2 cursor-pointer'><a onClick={() => {
+          <p className='py-4 text-white my-2 cursor-pointer'><a onClick={() => {
             setLoginType('login')
           }}>- Back to Login</a></p>
 

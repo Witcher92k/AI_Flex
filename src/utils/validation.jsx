@@ -1,6 +1,6 @@
 const formValidationFun = (password, email) => {
 
-    return 'password is invalid';
+    return null;
 
 }
 
