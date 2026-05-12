@@ -20,7 +20,6 @@ const Login = () => {
 
   const password = useRef(null);
 
-  const dispatch = useDispatch();
   
   const userName = useRef(null);
 
@@ -46,7 +45,7 @@ const Login = () => {
               displayName: userName.current.value,
               photoURL: "https://example.com/jane-q-user/profile.jpg"
             }).then(() => {
-               navigate('/browse');
+               
             }).catch((error) => {
               setErrorMessage(error.message);
             });
@@ -62,7 +61,6 @@ const Login = () => {
       signInWithEmailAndPassword(auth, email.current.value, password.current.value)
         .then((userCredential) => {
           console.log('Signed in:', userCredential.user);
-          navigate('/browse');
         })
         .catch((error) => {
           setErrorMessage(error.message);
