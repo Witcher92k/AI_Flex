@@ -17,7 +17,7 @@ const {original_title,overview,id} = mainMovie;
 
 
   return (
-    <div className='relative h-screen'>
+    <div className='relative h-screen overflow-hidden'>
         <VideoTitle title={original_title} overview={overview} />
         <VideoBackground id={id}></VideoBackground>
     </div>
