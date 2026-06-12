@@ -1,13 +1,9 @@
-import React, { useEffect } from 'react'
+import { useSelector } from 'react-redux'
 import Header from './Header'
-import { API_OPTIONS } from '../utils/constants'
-import { useDispatch, useSelector } from 'react-redux'
-import { addMovies } from '../utils/movieSlice'
-import useNowPlayingList from '../customHooks/useNowPlayingList';
+import useMovieLists from '../customHooks/useMovieLists';
 import MainContainer from './MainContainer'
 import SecondaryContainer from './SecondaryContainer'
 import GPTsearch from './GPTsearch'
-import callMovieSuggestion from '../utils/openai'
 
 
 const Browse = () => {
@@ -21,14 +17,13 @@ const Browse = () => {
   const gptToggle = useSelector(store => store.gpt.showGpt)
 
 
-  useNowPlayingList();
+  useMovieLists();
 
  
   return (
-    <div>
+    <div className="bg-black min-h-screen">
       <Header></Header>
-      {gptToggle ? <GPTsearch /> : ( <><MainContainer /><SecondaryContainer /></>)
-      }
+      {gptToggle ? <GPTsearch /> : (<><MainContainer /><SecondaryContainer /></>)}
     </div>
   )
 }

@@ -1,39 +1,41 @@
 
-import React, { useEffect } from 'react'
+import { useEffect } from 'react'
 import { API_OPTIONS } from '../utils/constants'
-import {useDispatch, useSelector} from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { addMovieTrailer } from '../utils/movieSlice';
 
 
-const useMovieTrailer = ({id})=>{
-
+const useMovieTrailer = ({ id }) => {
 
     const dispatch = useDispatch();
 
-    const movieTrailerData = useSelector(store=>store.movies?.movieTrailer);
-
-
+    const movieTrailerData = useSelector(store => store.movies?.movieTrailer);
 
     useEffect(() => {
         getMovieTrailer();
     }, [])
 
-
     const getMovieTrailer = async () => {
+        try {
+            const data = await fetch(
+                `https://api.themoviedb.org/3/movie/${id}/videos?language=en-US`,
+                API_OPTIONS
+            );
+            const json = await data.json();
+            const videos = json.results ?? [];
 
+            // Prefer official Trailer, fall back to Teaser, then any video
+            const video =
+                videos.find(v => v.type === 'Trailer' && v.site === 'YouTube') ||
+                videos.find(v => v.type === 'Teaser' && v.site === 'YouTube') ||
+                videos.find(v => v.site === 'YouTube');
 
-
-        const apiurl = `https://api.themoviedb.org/3/movie/${id}/videos?language=en-US`;
-
-
-        const data = await fetch(apiurl, API_OPTIONS);
-        const json = await data.json();
-        const trailer_data = json.results.filter(item => item.type == 'Trailer')[0].key;
-        dispatch(addMovieTrailer(trailer_data));
-
-        console.log(trailer_data);
-
-
+            if (video?.key) {
+                dispatch(addMovieTrailer(video.key));
+            }
+        } catch (e) {
+            console.error('Failed to fetch trailer:', e);
+        }
     }
 
 
