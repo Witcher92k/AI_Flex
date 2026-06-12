@@ -13,7 +13,7 @@ const useMovieTrailer = ({ id }) => {
 
     useEffect(() => {
         getMovieTrailer();
-    }, [])
+    }, [id])
 
     const getMovieTrailer = async () => {
         try {

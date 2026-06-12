@@ -1,17 +1,11 @@
 
-
-import React, { useEffect } from 'react'
-import { API_OPTIONS } from '../utils/constants'
-import {useDispatch, useSelector} from "react-redux";
-import { addMovieTrailer } from '../utils/movieSlice';
-
 import useMovieTrailer from '../customHooks/useMovieTrailer';
 
 const VideoBackground = ({ id }) => {
 
-
     const movieTrailerData = useMovieTrailer({id});
 
+    if (!movieTrailerData) return null;
 
     return (
         <div className="absolute inset-0 -z-10 overflow-hidden">
