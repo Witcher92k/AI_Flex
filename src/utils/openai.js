@@ -1,6 +1,6 @@
 import { GEMINI_KEY } from './constants';
 
-const callGemini = async (prompt) => {
+const callGemini = async (prompt, signal) => {
     const response = await fetch(
         'https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent',
         {
@@ -12,6 +12,7 @@ const callGemini = async (prompt) => {
             body: JSON.stringify({
                 contents: [{ parts: [{ text: prompt }] }],
             }),
+            signal,
         }
     );
     const data = await response.json();

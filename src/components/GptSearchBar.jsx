@@ -11,60 +11,109 @@ const SUGGESTION_CHIPS = [
   'Classic horror',
 ];
 
+const DEBOUNCE_MS = 700;
+const MIN_QUERY_LEN = 3;
+
 const GptSearchBar = () => {
   const dispatch = useDispatch();
-  const searchText = useRef(null);
+  const [query, setQuery] = useState('');
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const debounceRef = useRef(null);
+  const abortRef = useRef(null);
 
-  const searchMovie = async (movieName) => {
+  const searchMovie = async (movieName, signal) => {
     const data = await fetch(
       `https://api.themoviedb.org/3/search/movie?query=${encodeURIComponent(movieName)}&include_adult=false&language=en-US&page=1`,
-      API_OPTIONS
+      { ...API_OPTIONS, signal }
     );
     const result = await data.json();
     return result.results;
   };
 
-  const runSearch = async () => {
-    const query = searchText.current?.value?.trim();
-    if (!query || loading) return;
+  const runSearch = async (q) => {
+    if (!q?.trim()) return;
+
+    // Cancel any in-flight request
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+    const { signal } = controller;
 
     setLoading(true);
+    setError(null);
+    let cancelled = false;
     try {
-      const prompt = `You are a movie recommendation engine. Based on the query: "${query}", suggest exactly 5 movies. Return ONLY a comma-separated list of movie names with no extra text, numbering, or explanation. Example: Inception,Interstellar,The Matrix,Tenet,Arrival`;
-      const result = await callGemini(prompt);
+      const prompt = `You are a movie recommendation engine. Based on the query: "${q}", suggest exactly 5 movies. Return ONLY a comma-separated list of movie names with no extra text, numbering, or explanation. Example: Inception,Interstellar,The Matrix,Tenet,Arrival`;
+      const result = await callGemini(prompt, signal);
       const movieNames = result.split(',').map(s => s.trim()).filter(Boolean);
-      const MovieObject = await Promise.all(movieNames.map(name => searchMovie(name)));
+      const MovieObject = await Promise.all(movieNames.map(name => searchMovie(name, signal)));
       dispatch(addGptMovies({ movieNames, MovieObject }));
     } catch (e) {
+      if (e.name === 'AbortError') { cancelled = true; return; }
       console.error(e);
+      setError('Something went wrong. Please try again.');
     } finally {
-      setLoading(false);
+      if (!cancelled) setLoading(false);
     }
   };
 
+  const handleChange = (e) => {
+    const val = e.target.value;
+    setQuery(val);
+    clearTimeout(debounceRef.current);
+    // Only debounce-search once the query is meaningful
+    if (val.trim().length < MIN_QUERY_LEN) return;
+    debounceRef.current = setTimeout(() => runSearch(val.trim()), DEBOUNCE_MS);
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    clearTimeout(debounceRef.current);
+    runSearch(query.trim());
+  };
+
+  const handleClear = () => {
+    setQuery('');
+    setError(null);
+    setLoading(false);
+    clearTimeout(debounceRef.current);
+    abortRef.current?.abort();
+    dispatch(addGptMovies({ movieNames: null, MovieObject: null }));
+  };
+
   const fillAndSearch = (text) => {
-    if (searchText.current) searchText.current.value = text;
-    setTimeout(runSearch, 0);
+    setQuery(text);
+    clearTimeout(debounceRef.current);
+    runSearch(text);
   };
 
   return (
     <div className="w-full max-w-2xl px-4">
-      {/* Search input */}
       <form
-        onSubmit={(e) => { e.preventDefault(); runSearch(); }}
+        onSubmit={handleSubmit}
         className="flex items-center bg-white rounded-full overflow-hidden shadow-2xl ring-2 ring-transparent focus-within:ring-[#E50914]/50 transition-all duration-200"
       >
         <input
-          ref={searchText}
+          value={query}
+          onChange={handleChange}
           className="flex-1 px-6 py-4 text-black text-sm outline-none bg-transparent placeholder-gray-400"
           placeholder="e.g. mind-bending sci-fi with a twist ending..."
           type="text"
-          disabled={loading}
         />
+        {query && (
+          <button
+            type="button"
+            onClick={handleClear}
+            className="px-3 text-gray-400 hover:text-gray-700 text-lg leading-none"
+            aria-label="Clear search"
+          >
+            ✕
+          </button>
+        )}
         <button
           type="submit"
-          disabled={loading}
+          disabled={loading || !query.trim()}
           className="flex items-center gap-2 bg-[#E50914] hover:bg-[#f40612] text-white font-bold px-7 py-4 text-sm transition-colors disabled:opacity-70 disabled:cursor-not-allowed flex-shrink-0"
         >
           {loading ? (
@@ -87,14 +136,16 @@ const GptSearchBar = () => {
         </button>
       </form>
 
-      {/* Suggestion chips */}
+      {error && (
+        <p className="text-red-400 text-xs text-center mt-3">{error}</p>
+      )}
+
       <div className="flex flex-wrap justify-center gap-2 mt-4">
         {SUGGESTION_CHIPS.map(chip => (
           <button
             key={chip}
             onClick={() => fillAndSearch(chip)}
-            disabled={loading}
-            className="text-zinc-400 text-xs border border-zinc-600 rounded-full px-3 py-1.5 hover:border-white hover:text-white transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="text-zinc-400 text-xs border border-zinc-600 rounded-full px-3 py-1.5 hover:border-white hover:text-white transition-all duration-150"
           >
             {chip}
           </button>
